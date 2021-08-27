@@ -3,9 +3,9 @@ var END = 0;
 var gameState = PLAY;
 
 var sanitizer,germs,peolpe,lives,ground,invisibleGround;
-var germsGroup,germs1,germs2,germs3;
+var germsGroup,germs1,germs2,germs3,music1,music2,music3;
 var people,people_walking,people_collided;
-var groundImg,snitzrImg,germsImg,peopleImg,livesImg;
+var groundImg,snitzrImg,snitzrGroup,germsImg,edges,peopleImg,livesImg;
 
 var score = 0;
 
@@ -13,10 +13,13 @@ var gameOver,restart;
 
 function preload() {
   people_walking = loadAnimation("people1.png","people2.png","people3.png","people4.png","people5.png","people6.png","people7.png","people8.png");
+  people_collided = loadAnimation("people_collided.png")
   groundImg2 = loadImage("background2.jpg");
+  music1 = loadSound("music1.mp3");
+  music2 = loadSound("music2.mp3")
   lives = loadImage("lives.png");
-  snitzr1 = loadImage("sanitizer1.png");
-  snitzr2 = loadImage("sanitizer2.png");
+  snitzr1 = loadAnimation("sanitizer1.png");
+  snitzr2 = loadAnimation("sanitizer2.png");
   germs1 = loadImage("germs1.png");
   germs2 = loadImage("germs2.png");
   germs3 = loadImage("germs3.png");
@@ -31,38 +34,49 @@ function setup() {
   //ground.velocityX = -(6 + 3*score/100);
   //ground.scale = 2.5;
 
-  people = createSprite(200,350,20,50);
+  people = createSprite(30,540,20,50);
   people.addAnimation("walking",people_walking);
-  people.scale = 0.3;
+  people.addAnimation("collided",people_collided);
+  people.scale = 0.4;
   people.debug = true;
-  people.setCollider("rectangle",0,0,50,70)
+  people.setCollider("rectangle",0,0,50,250)
 
-  snitzr2 = createSprite(50,100);
-  snitzr2.addImage(snitzr1);
-  snitzr2.scale = 0.10;
+  edges = createEdgeSprites();
 
-  gameOver = createSprite(300,100);
+  snitzr3 = createSprite(50,100);
+  snitzr3.addAnimation("st1",snitzr1);
+  snitzr3.addAnimation("st2",snitzr2);
+  snitzr3.scale = 0.10;
+
+  gameOver = createSprite(400,200);
   gameOver.addImage(gameOverImg);
   
   gameOver.scale = 0.5;
 
   gameOver.visible = false;
   
-  invisibleGround = createSprite(210,360,400,10);
+  invisibleGround = createSprite(700,700,50,10);
   invisibleGround.visible = false;
+  invisibleGround.debug = true;
 
   germsGroup = new Group();
+  snitzrGroup = new Group();
 }
 
 function draw() {
   background(255);
   image(groundImg2,0,0,width,height);
+  fill("green");
+  textSize(30);
   text("Score: "+ score, 600,50);
+  
 
   
   if (gameState===PLAY){
     //score = score + Math.round(getFrameRate()/60);
     //ground.velocityX = -(6);
+
+    music1.play();
   
   
     //people.velocityY = people.velocityY + 0.8
@@ -70,9 +84,50 @@ function draw() {
     //if (ground.x < 0){
     //  ground.x = ground.width/2;
     //}
+    people.changeAnimation("walking",people_walking);
+
+    people.velocityX = 0;
+    people.velocityY = 0;
+
+    people.bounceOff(edges);
+
+    snitzr3.changeAnimation("st1",snitzr1);
+
+    snitzr3.x = people.x+20;
+    snitzr3.y = people.y-10;
+
+    if(keyDown("right")){
+      people.velocityX = 4;
+      people.velocityY = 0;
+    }
+
+    if(keyDown("left")){
+      people.velocityX = -4;
+      people.velocityY = 0;
+    }
+
+    if(keyDown("down")){
+      people.velocityX = 0;
+      people.velocityY = 4;
+    }
+
+    if(keyDown("up")){
+      people.velocityX = 0;
+      people.velocityY = -4;
+    }
+
+    if(keyDown("space")){
+      snitzr3.changeAnimation("st2",snitzr2);
+      music2.play();
+    }
   
     people.collide(invisibleGround);
     spawnGerms();
+
+    if(germsGroup.isTouching(snitzr3) && keyDown("space")){
+      germsGroup.destroyEach();
+      score = score+5;
+    }
   
     if(germsGroup.isTouching(people)){
         gameState = END;
@@ -99,13 +154,12 @@ function draw() {
 }
 
 function spawnGerms() {
-  if(frameCount % 60 === 0) {
+  if(frameCount % 120 === 0) {
     var germ = createSprite(800,350,10,40);
     germ.velocityX = -(6 + 3*score/100);
 
     germ.y = Math.round(random(50,500))
-    
-    var rand = Math.round(random(1,4));
+    var rand = Math.round(random(1,3));
     switch(rand) {
       case 1: germ.addImage(germs1);
               break;
@@ -116,19 +170,23 @@ function spawnGerms() {
       default: break;
     }
 
-    germ.debug = true;
+    //germ.debug = true;
     germ.setCollider("circle",0,0,20)
+
+    germ.rotation = 10;
+
+    germ.rotation = germ.rotation+5;
                
-    germ.scale = 0.2;
+    germ.scale = 0.4;
     germ.lifetime = 300;
     germsGroup.add(germ);
   }
 }
 
+
 function reset(){
   gameState = PLAY;
   gameOver.visible = false;
-  restart.visible = false;
   
   germsGroup.destroyEach();
   
